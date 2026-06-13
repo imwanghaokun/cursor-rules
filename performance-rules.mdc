@@ -1,0 +1,53 @@
+---
+description: 性能优化专题——测量、热点、并发性能（按需，线程池见架构规则）
+globs: "**/*.{java,kt,scala}"
+alwaysApply: false
+---
+
+# 性能规则
+
+## 基本原则
+
+- **先测量后优化**：无 profiling/基准数据时不做「感觉上的」优化
+- **关注热点**：80% 时间通常在 20% 代码；优先优化瓶颈路径
+- **正确性优先**：不为性能牺牲线程安全或业务正确性
+
+## CPU 与算法
+
+- 避免在热路径做 O(n²) 或更高复杂度操作
+- 循环内禁止重复创建昂贵对象（正则 Pattern、SimpleDateFormat、StringBuilder 可复用时复用）
+- 大数据集优先流式/分批处理，避免一次性加载到内存
+
+## 并发性能
+
+- 锁粒度尽量小；读多写少考虑 ReadWriteLock 或无锁结构
+- 减少锁竞争：分段、ThreadLocal、不可变对象
+- 线程池创建与配置 → 见 architecture-standards「并发与分布式」
+- 避免在锁内做 IO、RPC、sleep
+
+## 内存
+
+- 及时关闭流、连接、线程池（try-with-resources / shutdown + awaitTermination）
+- 警惕集合无界增长（缓存需 TTL/容量上限）
+- 大对象、大数组注意生命周期，避免长期持有引用
+
+## IO 与网络
+
+- 批量读写优于逐条；连接池复用连接
+- 设置合理超时，禁止无限阻塞
+- 远程调用考虑合并、缓存、异步
+
+## Java 特定
+
+- 优先使用 `java.util.concurrent` 工具类而非手写 wait/notify
+- 字符串拼接在循环中用 StringBuilder
+- 装箱/拆箱在热路径上注意 autoboxing 开销
+- 反射、动态代理仅用于非热路径或启动期
+
+## 性能改动要求
+
+提交性能相关改动时须说明：
+
+- 优化目标（延迟 / 吞吐 / 内存）
+- 如何验证（JMH、压测、profiler 截图/数据）
+- 是否有 trade-off（复杂度上升、可读性下降）
